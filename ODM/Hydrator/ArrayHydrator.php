@@ -6,16 +6,9 @@ use VankoSoft\Alexandra\ODM\Hydrator\HydratorInterface;
 use VankoSoft\Alexandra\ODM\Entity\Entity;
 use VankoSoft\Alexandra\ODM\CamelCaseTrait;
 
-class DataStaxHydrator implements HydratorInterface
+class ArrayHydrator extends Hydrator
 {
 	use CamelCaseTrait;
-
-	private $tableMeta;
-
-	public function __construct( $tableMeta )
-	{
-		$this->tableMeta	= $tableMeta;
-	}
 
 	/**
 	 *
@@ -23,10 +16,12 @@ class DataStaxHydrator implements HydratorInterface
 	 *
 	 * @return	array
 	 */
-	public function extract( Entity $entity)
+	public function extract( Entity $entity )
 	{
-		$row	= array();
-		foreach ( $this->tableMeta['columns'] as $column => $meta )
+	    $columns   = $this->config[get_class( $entity )]['columns'];
+	    
+		$row      = array();
+		foreach ( $columns as $column => $type )
 		{
 			$property	= lcfirst( $this->camelize( $column ) );
 			$row[$column]	= $entity->$property;

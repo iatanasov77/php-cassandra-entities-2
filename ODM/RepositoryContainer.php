@@ -10,6 +10,11 @@ use VankoSoft\Alexandra\ODM\Entity\Entity;
 use VankoSoft\Alexandra\ODM\Entity\EntitySupport;
 use VankoSoft\Alexandra\ODM\Hydrator\HydratorFactory;
 use VankoSoft\Alexandra\DBAL\TableGateway\TableGateway;
+use VankoSoft\Alexandra\ODM\Hydrator\ArrayHydrator;
+use VankoSoft\Alexandra\ODM\Hydrator\Hydrator;
+use VankoSoft\Alexandra\ODM\Hydrator\DataStaxHydrator;
+use VankoSoft\Alexandra\ODM\Exception\OdmException;
+use VankoSoft\Alexandra\DBAL\Adapter\Driver\DataStax\Schema;
 
 /**
  * @brief	EntityManager Service.
@@ -24,20 +29,19 @@ class RepositoryContainer implements RepositoryContainerInterface
 	
 	protected $config;
 	
+	protected $gw;
+	
 	/**
 	 * @var \VankoSoft\Alexandra\ODM\UnitOfWork\UnitOfWorkInterface $uow;
 	 */
 	protected $uow;
 	
 	/**
-	 * @var \VankoSoft\Alexandra\ODM\EntityHydrator $entityHydrator
-	 */
-	protected $entityHydrator;
-	
-	/**
 	 * @var array $repositories
 	 */
 	protected $repositories;
+	
+	protected $schema;
 	
 	/**
 	 * @brief	Repository container constructor.
@@ -52,8 +56,32 @@ class RepositoryContainer implements RepositoryContainerInterface
 		$connection			= new Connection( $config->get( 'connection' ), $config->get( 'logger' ) );
 		
 		$this->db			= $connection->get( $config->get( 'preferences.connection' ) );
-		$this->uow			= new UnitOfWork();
+		$this->uow			= new UnitOfWork( $this );
 		$this->repositories	= array();
+		
+		$this->initMetaData();
+		
+		$this->schema       = $config->get( 'schema' );
+	}
+	
+	public function getUnitOfWork()
+	{
+	    return $this->uow;
+	}
+	
+	public function getConfig()
+	{
+	    return $this->config;
+	}
+	
+	public function getSchema()
+	{
+	    return $this->schema;
+	}
+	
+	public function getTableGateway( $entityAlias )
+	{
+	    return $this->gw[$entityAlias];
 	}
 	
 	/**
@@ -64,25 +92,26 @@ class RepositoryContainer implements RepositoryContainerInterface
 		// Repositories lazy Loading. If repository is not loaded , try to load it.
 		if ( ! isset( $this->repositories[$alias] ) )
 		{
-			$entityBase		= '\VankoSoft\Alexandra\ODM\Entity\Entity';
-			$repositoryBase	= '\VankoSoft\Alexandra\ODM\Repository\RepositoryInterface';
-			
 			$repository					= $this->config->get( 'repository.' . $alias . '.repository' );
 			$entity						= $this->config->get( 'repository.' . $alias . '.entity' );
 			$table						= $this->config->get( 'repository.' . $alias . '.table' );
+			$columns                    = $this->config->get( 'repository.' . $alias . '.columns' );
 			
-			$tableGateway				= new TableGateway(
+			$this->gw[$alias]		    = new TableGateway(
 															$table,
-															$this->config->get( 'schema.' . $table ),
+															$this->schema[$alias],
 															$this->db
 														);
-			$hydrator					= HydratorFactory::get(
-																$this->db->driver(),
-																$this->config->get( 'schema.' . $table )
-															);
-			$entitySupport				= new EntitySupport( $tableGateway, $hydrator );
 			
-			$this->repositories[$alias]	= new $repository( $entity, $entitySupport, $this->uow );
+			$hydrator                   = $this->getHydrator( \VankoSoft\Alexandra\ODM\Hydrator\Hydrator::DATASTAX_HYDRATOR );
+// 			$hydrator					= HydratorFactory::get(
+// 																$this->db->driver(),
+// 																$this->config->get( 'schema.' . $table )
+// 															);
+			
+			$entitySupport				= new EntitySupport( $this->gw[$alias], $hydrator );
+			
+			$this->repositories[$alias]	= new $repository( $entity, $entitySupport, $this->uow, $columns );
 		}
 		
 		return $this->repositories[$alias];
@@ -90,6 +119,35 @@ class RepositoryContainer implements RepositoryContainerInterface
 	
 	public function commit()
 	{
-		$this->uow->commit();
+		$this->uow->commit( $this->getHydrator( Hydrator::ARRAY_HYDRATOR ) );
+	}
+	
+	public function getHydrator( $mode )
+	{
+	    switch ( $mode )
+	    {
+	        case Hydrator::DATASTAX_HYDRATOR:
+	            return new DataStaxHydrator( $this );
+	            
+	        case Hydrator::ARRAY_HYDRATOR:
+	            return new ArrayHydrator( $this );
+	            
+	        default:
+	            new OdmException( "Invalid Hydrator Mode!" );
+	    }
+	    
+	}
+	
+	private function initMetaData()
+	{
+	    // Create Schema meta if not exists
+	    $schemaPath = '/vagrant/webroot/schema.json';
+	    if( ! file_exists( $schemaPath ) )
+	    {
+	        $schema = \VankoSoft\Alexandra\DBAL\Adapter\Driver\DataStax\Schema::create(
+	            $this->config->get( 'repository' ), $this->db->schema()
+	        );
+	        file_put_contents( $schemaPath, json_encode( $schema ) );
+	    }
 	}
 }

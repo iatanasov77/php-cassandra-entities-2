@@ -15,7 +15,12 @@ class QueryBuilder
 	 */
 	public function select( $tableName, $columns, $keys = null )
 	{
-		$query	= sprintf( "SELECT %s FROM %s", implode( ', ', $columns ), $tableName );
+	    if ( empty( $columns ) )
+	    {
+	        $columns[] = ' * ';
+	    }
+	    $columns   = empty( $columns ) ? ' * ' : $columns;
+		$query	   = sprintf( "SELECT %s FROM %s", implode( ', ', $columns ), $tableName );
 	
 		if ( is_array( $keys ) && ! empty( $keys ) )
 		{
@@ -42,15 +47,21 @@ class QueryBuilder
 	 *
 	 * @return	string
 	 */
-	public function insert( $tableName, $keys )
+	public function insert( $tableName, $columns, $params )
 	{
+	    $values    = '';
+	    foreach ( $columns as $k => $v )
+	    {
+	        $values   .= isset ( $params[$k] ) ? ':' . $k . "," : "'" . $v . "',";
+	        
+	    }
 		$query	= sprintf( 
-							'INSERT INTO  %s ( %s ) VALUES ( :%s )',
+							'INSERT INTO  %s ( %s ) VALUES ( %s )',
 							$tableName,
-							implode( ', ', $keys ),
-							implode( ', :', $keys )
+							implode( ', ', array_keys( $columns ) ),
+							rtrim( $values, ',' )
 						);
-	
+		
 		return $query;
 	}
 	

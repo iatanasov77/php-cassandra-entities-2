@@ -13,7 +13,7 @@ use VankoSoft\Alexandra\ODM\Exception\OdmException;
  *			
  */
 class Entity
-{
+{   
 	/**
 	 * @brief	Magic method 'get'
 	 * 

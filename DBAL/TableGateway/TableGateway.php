@@ -41,16 +41,9 @@ class TableGateway implements TableGatewayInterface
 		return  $this->dbAdapter->query( $cql, $whereMap );
 	}
 	
-	public function insert( array $valueMap )
+	public function insert( array $schema, array $valueMap )
 	{
-		$columns	= array_keys( $valueMap );
-		
-		if ( ! empty( array_diff( $this->tableMeta['columns'], $columns ) ) )
-		{
-			throw new \Exception( 'Missing columns into passed values.' );
-		}
-		
-		$cql	= $this->queryBuilder->insert( $this->tableName, $columns );
+		$cql	= $this->queryBuilder->insert( $schema['table'], $schema['columns'], $valueMap );
 		
 		return  $this->dbAdapter->query( $cql, $valueMap );
 	}

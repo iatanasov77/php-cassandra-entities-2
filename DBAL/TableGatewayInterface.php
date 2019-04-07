@@ -6,7 +6,7 @@ interface TableGatewayInterface
 {
 	public function select( array $columnSet, array $whereMap );
 	
-	public function insert( array $valueMap );
+	public function insert( array $schema, array $valueMap );
 	
 	public function update( array $valueMap, array $whereMap );
 	

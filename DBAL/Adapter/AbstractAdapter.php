@@ -47,6 +47,11 @@ abstract class AbstractAdapter implements AdapterInterface
 		$this->close();
 	}
 	
+	public function db()
+	{
+	    return $this->db;
+	}
+	
 	public function driver()
 	{
 		return $this->driver;
@@ -75,9 +80,9 @@ abstract class AbstractAdapter implements AdapterInterface
 	
 	protected function _logQuery( $cql, array $params )
 	{
-		$keys	= array_map( function( $k ){ return ':'  .$k; }, array_keys( $params ) );
-		$logCql	= str_replace( $keys, $params, $cql );
+		//$keys	= array_map( function( $k ){ return ':'  .$k; }, array_keys( $params ) );
+		//$logCql	= str_replace( $keys, $params, $cql );
 	
-		$this->logger->log( $logCql, LogLevel::INFO );
+		//$this->logger->log( $logCql, LogLevel::INFO );
 	}
 }

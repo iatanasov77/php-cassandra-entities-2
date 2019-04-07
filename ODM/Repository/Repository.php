@@ -26,6 +26,8 @@ class Repository implements RepositoryInterface
 	 */
 	protected $uow;
 	
+	protected $columns;
+	
 	/**
 	 * @brief	Initialize Entity Repository
 	 * 
@@ -34,11 +36,12 @@ class Repository implements RepositoryInterface
 	 * 
 	 * @return	void
 	 */
-	public function __construct( $entityType, EntitySupport $es, UnitOfWorkInterface $uow )
+	public function __construct( $entityType, EntitySupport $es, UnitOfWorkInterface $uow, $columns )
 	{
 		$this->entityType	= $entityType;
 		$this->es			= $es;
 		$this->uow			= $uow;
+		$this->columns        = $columns;
 	}
 	
 	/**
@@ -63,9 +66,9 @@ class Repository implements RepositoryInterface
 		$entities	= array();
 		foreach ( $rows as $row )
 		{
-			$entity	= new $this->entityType;
+			$entity	= new $this->entityType( $this->columns );
 			
-			$changed	= $this->es->hydrator()->hydrate( $entity , $row );
+			$this->es->hydrator()->hydrate( $entity , $row );
 			$this->uow->schedule( $entity, $this->es, EntityState::PERSISTED );
 			$entities[]	= $entity;
 		}
@@ -89,6 +92,7 @@ class Repository implements RepositoryInterface
 	public function save( Entity $entity )
 	{
 		$this->uow->schedule( $entity, $this->es, EntityState::NOT_PERSISTED );
+		
 	}
 	
 	/**

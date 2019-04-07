@@ -2,20 +2,13 @@
 
 namespace VankoSoft\Alexandra\ODM\Hydrator;
 
-use VankoSoft\Alexandra\ODM\Hydrator\HydratorInterface;
+use VankoSoft\Alexandra\ODM\Hydrator\Hydrator;
 use VankoSoft\Alexandra\ODM\Entity\Entity;
 use VankoSoft\Alexandra\ODM\CamelCaseTrait;
 
-class DataStaxHydrator implements HydratorInterface
+class DataStaxHydrator extends Hydrator
 {
 	use CamelCaseTrait;
-	
-	private $tableMeta;
-	
-	public function __construct( $tableMeta )
-	{
-		$this->tableMeta	= $tableMeta;
-	}
 	
 	/**
 	 * 
@@ -92,6 +85,14 @@ class DataStaxHydrator implements HydratorInterface
 					}
 					
 					break;
+				case ( $value instanceof \Cassandra\Uuid ):
+				    if ( $entity->$property	!== $value->uuid() )
+				    {
+				        $entity->$property	= $value->uuid();
+				        $updatedColumns[]	= $key;
+				    }
+				    
+				    break;
 				default:
 					if ( $entity->$property	!== $value )
 					{

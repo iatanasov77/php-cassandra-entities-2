@@ -71,8 +71,9 @@ class Adapter extends AbstractAdapter
 	
 	protected function _execute( $cql, array $params = array(), array $options = array() )
 	{
-		$statement	= $this->db->prepare( $cql );
+		$statement    = $this->db->prepare( $cql );
+		$ret          = $this->db->execute( $statement, ['arguments' => $params] );
 		
-		return $this->db->execute( $statement );
+		return $ret;
 	}
 }
