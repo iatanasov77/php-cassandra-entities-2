@@ -44,24 +44,29 @@ class RepositoryContainer implements RepositoryContainerInterface
 	protected $schema;
 	
 	/**
+	 * @var string $kernelProjectDir
+	 */
+	protected $kernelProjectDir;
+	
+	/**
 	 * @brief	Repository container constructor.
 	 * 
 	 * @param	\Enigma\Library\Database\Alexandra\Adapter\Adapter $config
 	 * 
 	 * @return	void
 	 */
-	public function __construct( NoodlehausConfig $config )
+	public function __construct( NoodlehausConfig $config, string $kernelProjectDir )
 	{
-		$this->config		= $config;
-		$connection			= new Connection( $config->get( 'connection' ), $config->get( 'logger' ) );
+		$this->config             = $config;
+		$connection               = new Connection( $config->get( 'connection' ), $config->get( 'logger' ) );
 		
-		$this->db			= $connection->get( $config->get( 'preferences.connection' ) );
-		$this->uow			= new UnitOfWork( $this );
-		$this->repositories	= array();
+		$this->db			      = $connection->get( $config->get( 'preferences.connection' ) );
+		$this->uow                = new UnitOfWork( $this );
+		$this->repositories	      = array();
+		$this->kernelProjectDir   = $kernelProjectDir;
 		
 		$this->initMetaData();
-		
-		$this->schema       = $config->get( 'schema' );
+		$this->schema             = $config->get( 'schema' );
 	}
 	
 	public function getUnitOfWork()
@@ -89,6 +94,8 @@ class RepositoryContainer implements RepositoryContainerInterface
 	 */
 	public function get( $alias )
 	{
+	    //var_dump($this->schema); die;
+	    
 		// Repositories lazy Loading. If repository is not loaded , try to load it.
 		if ( ! isset( $this->repositories[$alias] ) )
 		{
@@ -97,9 +104,11 @@ class RepositoryContainer implements RepositoryContainerInterface
 			$table						= $this->config->get( 'repository.' . $alias . '.table' );
 			$columns                    = $this->config->get( 'repository.' . $alias . '.columns' );
 			
+			//$tableSchema                = $this->schema[$alias];
+			$tableSchema                = $this->schema[$table];
 			$this->gw[$alias]		    = new TableGateway(
 															$table,
-															$this->schema[$alias],
+															$tableSchema,
 															$this->db
 														);
 			
@@ -141,7 +150,7 @@ class RepositoryContainer implements RepositoryContainerInterface
 	private function initMetaData()
 	{
 	    // Create Schema meta if not exists
-	    $schemaPath = '/vagrant/webroot/schema.json';
+	    $schemaPath = $this->kernelProjectDir . '/var/schema.json';
 	    if( ! file_exists( $schemaPath ) )
 	    {
 	        $schema = \VankoSoft\Alexandra\DBAL\Adapter\Driver\DataStax\Schema::create(
